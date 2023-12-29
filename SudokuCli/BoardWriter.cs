@@ -40,6 +40,7 @@ namespace SudokuCli
         public static readonly int EntropyBoardWidth = EntropyColumnIndexLookup.Length;
 
         public const string IgnoredCell = "#";
+        public const int MsDelay = 25;
          
         private readonly static List<(Board Board, Board? Solution)> Presets = [];
         public static Board Board { get; private set; } = new();
@@ -151,15 +152,17 @@ namespace SudokuCli
             Write(position => (board[position], board[position] > 0), writeEntropy ? board.Entropy : null, boardOverride == null ? Solution : null);
         }
 
-        public static void WritePeers(Func<Coordinate, Coordinate[]> peersLookup, int msTimeout = 100)
+        public static void WritePeers(Func<Coordinate, Coordinate[]> peersLookup, int msDelay = MsDelay)
         {
             foreach (Coordinate currentPosition in Board.IterateCells())
             {
                 Coordinate[] peers = peersLookup(currentPosition);
                 Write(position => position == currentPosition ? "O" : peers.Contains(position) ? "*" : null);
-                Thread.Sleep(msTimeout);
+                Delay(msDelay);
             }
             Write();
         }
+
+        public static void Delay(int msDelay = MsDelay) => Thread.Sleep(msDelay);
     }
 }

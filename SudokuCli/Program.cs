@@ -122,9 +122,26 @@ do
             BoardWriter.Unload();
             BoardWriter.Write();
             break;
+        case "generate":
+            BoardWriter.Unload();
+            BoardWriter.Unload();
+
+            bool noUpdates = options.Length == 1 && NoUpdatesAliases.Contains(options[0]);
+            BoardWriter.Board.Solve(noUpdates ? null : (solved, iteration) =>
+            {
+                BoardWriter.Write();
+                BoardWriter.Delay();
+            });
+
+            if (noUpdates)
+                BoardWriter.Write();
+            break;
         case "show":
             if (options.Length == 0)
+            {
                 BoardWriter.Write();
+                break;
+            }
 
             string subCommand = options[0];
             if (options.Length == 1)
@@ -141,6 +158,7 @@ do
                     BoardWriter.Write(position => BoardWriter.Board[position] == 0 ? BoardWriter.Board.Entropy[position].Length : null);
                 else if (PeersAliases.Contains(subCommand))
                     BoardWriter.WritePeers(position => BoardWriter.Board.Peers[position]);
+                break;
             }
 
             if (options.Length == 2)
@@ -167,6 +185,7 @@ do
                     else if (BlockAliases.Contains(subCommand))
                         BoardWriter.Write(position => position.Block == includeIndex ? BoardWriter.Board[position] : BoardWriter.IgnoredCell);
                 }
+                break;
             }
 
             if (options.Length == 3)
@@ -181,20 +200,23 @@ do
                     if (EntropyAliases.Contains(subCommand))
                         Console.WriteLine($"Entropy ({rowIndex}, {colIndex}): [ {string.Join(", ", BoardWriter.Board.Entropy[providedPosition])} ]");
                 }
+                break;
             }
 
             break;
         case "solve":
-            bool noUpdates = options.Length == 1 && NoUpdatesAliases.Contains(options[0]);
+            noUpdates = options.Length == 1 && NoUpdatesAliases.Contains(options[0]);
             (int totalSolved, int totalIterations) = BoardWriter.Board.Solve(noUpdates ? null : (solved, iteration) =>
             {
                 BoardWriter.Write();
-                Thread.Sleep(25);
+                BoardWriter.Delay();
             });
 
             if (!BoardWriter.Board.Cells.Any(cell => cell == 0))
                 BoardWriter.Register(BoardWriter.Board, (int[])BoardWriter.Board.Cells.Clone());
-            BoardWriter.Write();
+
+            if (noUpdates)
+                BoardWriter.Write();
             Console.WriteLine($"Solved {totalSolved} positions in {totalIterations} iterations.");
             break;
         case "set":
