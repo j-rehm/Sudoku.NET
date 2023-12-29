@@ -5,22 +5,30 @@ namespace Sudoku.Models
 {
     public sealed class Board
     {
+        #region Member Properties
         public const int Magnitude = 9;
         public const int TotalSize = Magnitude * Magnitude;
         public const int BlockSize = Magnitude / 3;
 
+        public const int InvalidPosition = -1;
+
+        public Coordinate[][] Peers { get; }
         public int[] OriginalCells { get; }
         public int[] Cells { get; private set; }
-        public Coordinate[][] Peers { get; private set; }
         public int[][] Entropy { get; private set; }
+
+        private readonly Random Rng;
+        #endregion
 
         public Board(int[]? cells = null)
         {
             cells = (int[]?)cells?.Clone() ?? new int[TotalSize];
             if (cells.Length != TotalSize)
                 throw new ArgumentException($"Provided cell array must have exactly {TotalSize} indices.", nameof(cells));
+            Rng = new();
 
-            CalculatePeers();
+            Peers = new Coordinate[TotalSize][];
+            IterateCells(position => Peers[position] = GetPeers(position));
 
             OriginalCells = cells;
             ResetCells();
@@ -43,30 +51,14 @@ namespace Sudoku.Models
             get => this[new Coordinate(row, column).Index];
             set => this[new Coordinate(row, column).Index] = value;
         }
-        public int this[Coordinate coord]
+        public int this[Coordinate position]
         {
-            get => this[coord.Index];
-            set => this[coord.Index] = value;
+            get => this[position.Index];
+            set => this[position.Index] = value;
         }
         #endregion
 
-        public static void IterateCells(Action<Coordinate> handler) => 0.UpTo(TotalSize, index => handler(index));
-        public static int ClampCellValue(int value, int min = 0, int max = Magnitude) => value < min ? min : value > max ? max : value;
-
-        private bool SetCell(Coordinate coord, int newValue, bool recalculate = true)
-        {
-            newValue = ClampCellValue(newValue);
-            int oldValue = this[coord];
-            if (oldValue != newValue)
-            {
-                Cells[coord] = newValue;
-                if (recalculate)
-                    CalculateEntropy();
-                return true;
-            }
-            return false;
-        }
-
+        #region Property Initializers
         [MemberNotNull(nameof(Cells))]
         private void ResetCells(int[]? cellsSnapshot = null)
         {
@@ -75,19 +67,26 @@ namespace Sudoku.Models
         }
         public void Reset() => ResetCells();
 
+        [MemberNotNull(nameof(Entropy))]
+        private void CalculateEntropy()
+        {
+            Entropy = new int[TotalSize][];
+            IterateCells(position => Entropy[position] = this[position] != 0 ? [] : 1.UpTo(Magnitude + 1).Where(value => !Peers[position].Select(peerPosition => this[peerPosition]).Contains(value)).ToArray());
+        }
+        #endregion
 
-        private static Coordinate[] GetRowPeers(Coordinate coord) => 0.UpTo(Magnitude).Where(column => coord.Column != column).Select(column => new Coordinate(coord.Row, column)).ToArray();
-        private static Coordinate[] GetColumnPeers(Coordinate coord) => 0.UpTo(Magnitude).Where(row => coord.Row != row).Select(row => new Coordinate(row, coord.Column)).ToArray();
-        private static Coordinate[] GetBlockPeers(Coordinate coord, bool excludeSameRowColumn = false)
+        public static Coordinate[] GetRowPeers(Coordinate position) => 0.UpTo(Magnitude).Where(column => position.Column != column).Select(column => new Coordinate(position.Row, column)).ToArray();
+        public static Coordinate[] GetColumnPeers(Coordinate position) => 0.UpTo(Magnitude).Where(row => position.Row != row).Select(row => new Coordinate(row, position.Column)).ToArray();
+        public static Coordinate[] GetBlockPeers(Coordinate position, bool excludeSameRowColumn = false)
         {
             List<Coordinate> coordinates = [];
-            int blockStartRow = coord.Block / BlockSize * BlockSize;
-            int blockStartCol = coord.Block % BlockSize * BlockSize;
+            int blockStartRow = position.Block / BlockSize * BlockSize;
+            int blockStartCol = position.Block % BlockSize * BlockSize;
             foreach (int row in blockStartRow.UpTo(blockStartRow + BlockSize))
             {
                 foreach (int column in blockStartCol.UpTo(blockStartCol + BlockSize))
                 {
-                    if (!excludeSameRowColumn || (row != coord.Row && column != coord.Column))
+                    if (!excludeSameRowColumn || (row != position.Row && column != position.Column))
                     {
                         coordinates.Add((row, column));
                     }
@@ -95,61 +94,132 @@ namespace Sudoku.Models
             }
             return [.. coordinates];
         }
+        public static Coordinate[] GetPeers(Coordinate position) => [.. GetRowPeers(position), .. GetColumnPeers(position), .. GetBlockPeers(position, true)];
 
-        [MemberNotNull(nameof(Peers))]
-        private void CalculatePeers()
+        public static IEnumerable<Coordinate> IterateCells()
         {
-            Peers = new Coordinate[TotalSize][];
-            IterateCells(coord => Peers[coord] = [.. GetRowPeers(coord), .. GetColumnPeers(coord), .. GetBlockPeers(coord, true)]);
+            foreach (Coordinate position in 0.UpTo(TotalSize))
+                yield return position;
         }
-
-        [MemberNotNull(nameof(Entropy))]
-        private void CalculateEntropy()
+        public static void IterateCells(Action<Coordinate> handler)
         {
-            Entropy = new int[TotalSize][];
-            IterateCells(coord => Entropy[coord] = 1.UpTo(Magnitude + 1).Where(value => !Peers[coord].Select(peerCoord => this[peerCoord]).Contains(value)).ToArray());
+            foreach (Coordinate position in IterateCells())
+                handler(position);
         }
+        public static int ClampCellValue(int value, int min = 0, int max = Magnitude) => value < min ? min : value > max ? max : value;
 
-        public int SolveStep()
+        private bool SetCell(Coordinate position, int newValue)
         {
-            bool isValid = true;
-            int solved = 0;
-            IterateCells((coord) =>
+            newValue = ClampCellValue(newValue);
+            int oldValue = this[position];
+            if (oldValue != newValue)
             {
-                int[] entropy = Entropy[coord];
-                if (this[coord] == 0)
-                {
-                    if (entropy.Length == 0)
-                        isValid = false;
-                    else if (entropy.Length == 1)
-                    {
-                        SetCell(coord, entropy[0], false);
-                        solved++;
-                    }
-                }
-            });
-            CalculateEntropy();
-            return isValid ? solved : -1;
+                Cells[position] = newValue;
+                CalculateEntropy();
+                return true;
+            }
+            return false;
         }
 
-        public (int TotalSolved, int TotalIterations) Solve(Action<int, int> iterated)
+        #region Solver
+        public int SolveStep(Action<int, int>? notifyUpdate)
+        {
+            int solved = 0;
+
+            List<Coordinate> collapsedCells = [];
+            foreach (Coordinate position in IterateCells())
+            {
+                if (this[position] == 0)
+                {
+                    if (Entropy[position].Length == 0)
+                        return InvalidPosition;
+                        
+                    if (Entropy[position].Length == 1)
+                        collapsedCells.Add(position);
+                }
+            }
+
+            if (collapsedCells.Count > 0)
+            {
+                foreach (Coordinate collapsedCell in collapsedCells)
+                {
+                    if (Entropy[collapsedCell].Length != 1)
+                        return InvalidPosition;
+
+                    SetCell(collapsedCell, Entropy[collapsedCell][0]);
+                    solved++;
+                    notifyUpdate?.Invoke(solved, 1);
+                }
+            }
+
+            return solved;
+        }
+        private (int TotalSolved, int TotalIterations) SolvePositionRecursive(Action<int, int>? notifyUpdate)
+        {
+            int lowestEntropySize = Entropy.Where(entropy => entropy.Length > 0).Min(entropy => entropy.Length);
+            if (lowestEntropySize == 0)
+                return (0, 0);
+            int[] cellsSnapshot = (int[])Cells.Clone();
+
+            Coordinate[] lowEntropyPositions = IterateCells().Where(position => Entropy[position].Length == lowestEntropySize).ToArray();
+            Coordinate selectedPosition = lowEntropyPositions[Rng.Next(lowEntropyPositions.Length)];
+            int[] shuffledValues = Extensions.Extensions.Shuffle(Rng, Entropy[selectedPosition]).ToArray();
+
+            int totalSolved = 0;
+            int totalIterations = 0;
+            int solved = 0;
+            foreach (int i in 0.UpTo(Entropy[selectedPosition].Length))
+            {
+                SetCell(selectedPosition, shuffledValues[i]);
+                totalSolved++;
+                totalIterations++;
+                notifyUpdate?.Invoke(totalSolved, totalIterations);
+                (solved, int iterations) = Solve(notifyUpdate);
+                totalIterations += iterations;
+                
+                if (solved == InvalidPosition) // Bad Guess, try again
+                {
+                    ResetCells(cellsSnapshot);
+                    totalSolved = 0;
+                    continue;
+                }
+                else // Good guess, exit
+                {
+                    totalSolved += solved;
+                    break;
+                }
+            }
+            if (solved == InvalidPosition)
+                return (InvalidPosition, totalIterations);
+
+            return (totalSolved++, totalIterations); // Increment because this method solved one position, other solutions came as a result
+        }
+        public (int TotalSolved, int TotalIterations) Solve(Action<int, int>? notifyUpdate = null)
         {
             int totalSolved = 0;
             int totalIterations = 0;
 
             int solved;
+            int iterations;
             do
             {
-                solved = SolveStep();
+                solved = SolveStep(notifyUpdate);
+                if (solved == InvalidPosition)
+                    return (InvalidPosition, totalIterations);
                 totalSolved += solved;
-                totalIterations++;
-                iterated(solved, totalIterations);
-
-                if (solved == -1)
-                    return (-1, totalIterations);
             } while (solved > 0);
+
+            if (Cells.Any(cell => cell == 0))
+            {
+                (solved, iterations) = SolvePositionRecursive(notifyUpdate);
+                totalIterations += iterations;
+                if (solved == InvalidPosition)
+                    return (InvalidPosition, totalIterations);
+                totalSolved += solved;
+            }
 
             return (totalSolved, totalIterations);
         }
+        #endregion
     }
 }

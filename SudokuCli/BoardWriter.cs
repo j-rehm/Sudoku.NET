@@ -1,4 +1,5 @@
-﻿using Sudoku.Models;
+﻿using Sudoku.Extensions;
+using Sudoku.Models;
 
 namespace SudokuCli
 {
@@ -39,8 +40,56 @@ namespace SudokuCli
         public static readonly int EntropyBoardWidth = EntropyColumnIndexLookup.Length;
 
         public const string IgnoredCell = "#";
+         
+        private readonly static List<(Board Board, Board? Solution)> Presets = [];
+        public static Board Board { get; private set; } = new();
+        public static Board? Solution { get; private set; }
 
-        private static void Write(Func<Coordinate, (object?, bool)> lookup, int[][]? entropy)
+        public static void Register(Board board, Board? solution = null)
+        {
+            for (int i = 0; i < Presets.Count; i++)
+            {
+                if (Presets[i].Board == board)
+                {
+                    Presets[i] = (board, solution);
+                    if (Board == board)
+                        Solution = solution;
+                    return;
+                }
+            }
+            Presets.Add((board, solution));
+        }
+        public static void UnRegister(Board board)
+        {
+            for (int i = 0; i < Presets.Count; i++)
+            {
+                if (Presets[i].Board == board)
+                {
+                    if (Board == board)
+                        Unload();
+                    Presets.RemoveAt(i);
+                    return;
+                }
+            }
+        }
+
+        public static bool Load(int index)
+        {
+            if (index >= 0 && index < Presets.Count)
+            {
+                Board = Presets[index].Board;
+                Solution = Presets[index].Solution;
+                return true;
+            }
+            return false;
+        }
+        public static void Unload()
+        {
+            Board = new();
+            Solution = null;
+        }
+
+        private static void Write(Func<Coordinate, (object?, bool)> lookup, int[][]? entropy, Board? solution = null)
         {
             Console.Clear();
 
@@ -55,31 +104,30 @@ namespace SudokuCli
             //}
 
             Console.Write(EmptyBoardLiteral);
-            Board.IterateCells(coord =>
+            foreach (Coordinate position in Board.IterateCells())
             {
-                int cellTop = RowIndexLookup.IndexOf(coord.Row.ToString());
-                int cellLeft = ColumnIndexLookup.IndexOf(coord.Column.ToString());
+                int cellTop = RowIndexLookup.IndexOf(position.Row.ToString());
+                int cellLeft = ColumnIndexLookup.IndexOf(position.Column.ToString());
 
                 Console.SetCursorPosition(cellLeft, cellTop);
-                (object? value, bool write) = lookup(coord);
+                (object? value, bool write) = lookup(position);
                 if (write)
-                    Console.Write(value);
+                    WriteWithColor(value, (value => solution is not null && value is int cell && solution[position] == cell, ConsoleColor.Green), (value => solution is not null && value is int cell && solution[position] != cell, ConsoleColor.Yellow));
 
                 if (entropy is not null)
                 {
-                    int entropyLeft = BoardWidth + EntropyBuffer + EntropyColumnIndexLookup.IndexOf(coord.Column.ToString());
+                    int entropyLeft = BoardWidth + EntropyBuffer + EntropyColumnIndexLookup.IndexOf(position.Column.ToString());
 
                     Console.SetCursorPosition(entropyLeft, cellTop);
                     if (value is int cell && cell == 0)
-                        WriteWithColor(entropy[coord].Length, (value => value is int entropyVolume && entropyVolume == 1, ConsoleColor.Green), (value => value is int entropyVolume && entropyVolume == 0 && cell == 0, ConsoleColor.Red));
+                        WriteWithColor(entropy[position].Length, (entropyValue => entropyValue is int entropySize && entropySize == 1, ConsoleColor.Green), (entropyValue => entropyValue is int entropySize && entropySize == 0 && cell == 0, ConsoleColor.Red));
                 }
-            });
+            }
 
             Console.SetCursorPosition(finalLeft, finalTop);
             Console.WriteLine();
-            Console.WriteLine();
 
-            static void WriteWithColor(object value, params (Func<object, bool> Condition, ConsoleColor ForegroundColor)[] conditions)
+            static void WriteWithColor(object? value, params (Func<object?, bool> Condition, ConsoleColor ForegroundColor)[] conditions)
             {
                 ConsoleColor originalColor = Console.ForegroundColor;
                 foreach (var (condition, foregroundColor) in conditions)
@@ -96,7 +144,22 @@ namespace SudokuCli
         }
 
         public static void Write(Func<Coordinate, (object?, bool)> lookup) => Write(lookup, null);
-        public static void Write(Func<Coordinate, object?> lookup) => Write(coord => (lookup(coord), true));
-        public static void Write(Board board, bool writeEntropy = true) => Write(coord => (board[coord], board[coord] > 0), writeEntropy ? board.Entropy : null);
+        public static void Write(Func<Coordinate, object?> lookup) => Write(position => (lookup(position), true));
+        public static void Write(Board? boardOverride = null, bool writeEntropy = true)
+        {
+            Board board = boardOverride ?? Board;
+            Write(position => (board[position], board[position] > 0), writeEntropy ? board.Entropy : null, boardOverride == null ? Solution : null);
+        }
+
+        public static void WritePeers(Func<Coordinate, Coordinate[]> peersLookup, int msTimeout = 100)
+        {
+            foreach (Coordinate currentPosition in Board.IterateCells())
+            {
+                Coordinate[] peers = peersLookup(currentPosition);
+                Write(position => position == currentPosition ? "O" : peers.Contains(position) ? "*" : null);
+                Thread.Sleep(msTimeout);
+            }
+            Write();
+        }
     }
 }
