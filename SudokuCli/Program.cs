@@ -71,6 +71,20 @@ int[,] invalidPosition = new int[Board.Magnitude, Board.Magnitude] {
     { 0,0,8, 1,0,9, 0,4,0, },
 };
 
+int[,] testPosition = new int[Board.Magnitude, Board.Magnitude] {
+    { 0,0,9, 0,5,0, 0,0,0, },
+    { 5,0,0, 0,0,0, 4,0,0, },
+    { 0,0,0, 0,0,1, 0,8,0, },
+
+    { 0,0,7, 0,0,0, 0,0,9, },
+    { 0,0,0, 0,0,4, 7,0,0, },
+    { 0,5,0, 8,0,0, 0,0,0, },
+
+    { 0,0,0, 0,1,0, 0,0,3, },
+    { 6,0,0, 0,0,0, 0,2,0, },
+    { 0,0,0, 0,2,0, 0,0,0, },
+};
+
 string[] RowAliases = ["row", "r"];
 string[] RowsAliases = ["rows", "r"];
 
@@ -86,14 +100,15 @@ string[] PeersAliases = ["peers", "p"];
 string[] OriginalAliases = ["original", "o"];
 string[] BoardAliases = ["board", "bd"];
 string[] EntropyAliases = ["entropy", "e"];
+string[] SolutionAliases = ["solution", "s"];
+string[] BigAliases = ["big"];
 
-string[] NoUpdatesAliases = ["noupdates", "n"];
-
-BoardWriter.Register(stepSolvable);
-BoardWriter.Register(guessSolvable);
-BoardWriter.Register(uniqueSolvable);
-BoardWriter.Register(uniqueSolvable, uniqueSolution);
-BoardWriter.Register(invalidPosition);
+BoardWriter.Register(stepSolvable, "This board can be solved without making any guesses.");
+BoardWriter.Register(guessSolvable, "This board can only be solved by making guesses.");
+BoardWriter.Register(uniqueSolvable, "This board has the minimum of 17 givens.");
+BoardWriter.Register(uniqueSolvable, "This board has the minimum of 17 givens.", uniqueSolution);
+BoardWriter.Register(invalidPosition, "This board is not valid.");
+BoardWriter.Register(testPosition, "This is a board with randomly-selected givens.");
 
 BoardWriter.Write();
 
@@ -118,22 +133,37 @@ do
                     BoardWriter.Write();
                 else Console.WriteLine($"Could not find preset at index '{index}'");
             break;
+        case "save":
+            Console.WriteLine($"The board has been saved to position {BoardWriter.Register(BoardWriter.Board)}.");
+            break;
         case "unload":
             BoardWriter.Unload();
             BoardWriter.Write();
             break;
         case "generate":
             BoardWriter.Unload();
-            BoardWriter.Unload();
 
-            bool noUpdates = options.Length == 1 && NoUpdatesAliases.Contains(options[0]);
-            BoardWriter.Board.Solve(noUpdates ? null : (solved, iteration) =>
+            bool updates = false;
+            bool delay = false;
+            if (options.Length == 1)
+            {
+                if (options[0].StartsWith('-'))
+                {
+                    char[] charOptions = options[0].ToCharArray()[1..];
+                    updates = charOptions.Contains('u');
+                    delay = charOptions.Contains('d');
+                }
+                else break;
+            }
+
+            BoardWriter.Board.Solve(updates ? (solved, iteration) =>
             {
                 BoardWriter.Write();
-                BoardWriter.Delay();
-            });
+                if (delay)
+                    BoardWriter.Delay();
+            } : null);
 
-            if (noUpdates)
+            if (!updates)
                 BoardWriter.Write();
             break;
         case "show":
@@ -146,7 +176,9 @@ do
             string subCommand = options[0];
             if (options.Length == 1)
             {
-                if (RowsAliases.Contains(subCommand))
+                if (BigAliases.Contains(subCommand))
+                    BoardWriter.ShowBig(0);
+                else if (RowsAliases.Contains(subCommand))
                     BoardWriter.Write(position => position.Row);
                 else if (ColumnsAliases.Contains(subCommand))
                     BoardWriter.Write(position => position.Column);
@@ -158,6 +190,10 @@ do
                     BoardWriter.Write(position => BoardWriter.Board[position] == 0 ? BoardWriter.Board.Entropy[position].Length : null);
                 else if (PeersAliases.Contains(subCommand))
                     BoardWriter.WritePeers(position => BoardWriter.Board.Peers[position]);
+                else if (SolutionAliases.Contains(subCommand))
+                    if (BoardWriter.Solution != null)
+                        BoardWriter.Write(BoardWriter.Solution);
+                    else Console.WriteLine("A solution for the current board has not been found.");
                 break;
             }
 
@@ -178,7 +214,9 @@ do
                 }
                 else if (int.TryParse(options[1], out int includeIndex))
                 {
-                    if (RowAliases.Contains(subCommand))
+                    if (BigAliases.Contains(subCommand) && includeIndex > 0 && includeIndex < BoardWriter.Big.Length)
+                        BoardWriter.ShowBig(includeIndex);
+                    else if (RowAliases.Contains(subCommand))
                         BoardWriter.Write(position => position.Row == includeIndex ? BoardWriter.Board[position] : BoardWriter.IgnoredCell);
                     else if (ColumnAliases.Contains(subCommand))
                         BoardWriter.Write(position => position.Column == includeIndex ? BoardWriter.Board[position] : BoardWriter.IgnoredCell);
@@ -205,18 +243,31 @@ do
 
             break;
         case "solve":
-            noUpdates = options.Length == 1 && NoUpdatesAliases.Contains(options[0]);
-            (int totalSolved, int totalIterations) = BoardWriter.Board.Solve(noUpdates ? null : (solved, iteration) =>
+            updates = false;
+            delay = false;
+            if (options.Length == 1)
+            {
+                if (options[0].StartsWith('-'))
+                {
+                    char[] charOptions = options[0].ToCharArray()[1..];
+                    updates = charOptions.Contains('u');
+                    delay = charOptions.Contains('d');
+                }
+                else break;
+            }
+
+            (int totalSolved, int totalIterations) = BoardWriter.Board.Solve(updates ? (solved, iteration) =>
             {
                 BoardWriter.Write();
-                BoardWriter.Delay();
-            });
+                if (delay)
+                    BoardWriter.Delay();
+            } : null);
+
+            if (!updates)
+                BoardWriter.Write();
 
             if (!BoardWriter.Board.Cells.Any(cell => cell == 0))
-                BoardWriter.Register(BoardWriter.Board, (int[])BoardWriter.Board.Cells.Clone());
-
-            if (noUpdates)
-                BoardWriter.Write();
+                BoardWriter.Register(BoardWriter.Board, solution: (int[])BoardWriter.Board.Cells.Clone());
             Console.WriteLine($"Solved {totalSolved} positions in {totalIterations} iterations.");
             break;
         case "set":

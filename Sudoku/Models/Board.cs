@@ -106,7 +106,7 @@ namespace Sudoku.Models
             foreach (Coordinate position in IterateCells())
                 handler(position);
         }
-        public static int ClampCellValue(int value, int min = 0, int max = Magnitude) => value < min ? min : value > max ? max : value;
+        public static int ClampCellValue(int value) => int.Clamp(value, 0, Magnitude);
 
         private bool SetCell(Coordinate position, int newValue)
         {
@@ -207,6 +207,7 @@ namespace Sudoku.Models
                 if (solved == InvalidPosition)
                     return (InvalidPosition, totalIterations);
                 totalSolved += solved;
+                totalIterations += 1;
             } while (solved > 0);
 
             if (Cells.Any(cell => cell == 0))

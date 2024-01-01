@@ -1,5 +1,4 @@
-﻿using Sudoku.Extensions;
-using Sudoku.Models;
+﻿using Sudoku.Models;
 
 namespace SudokuCli
 {
@@ -39,26 +38,119 @@ namespace SudokuCli
         public const string EntropyColumnIndexLookup = "0 1 2   3 4 5   6 7 8";
         public static readonly int EntropyBoardWidth = EntropyColumnIndexLookup.Length;
 
+        #region Big Board Tests
+        public const string BigBoard = """
+╔═══════╤═══════╤═══════╦═══════╤═══════╤═══════╦═══════╤═══════╤═══════╗
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╟―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╢
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╟―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╢
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╠═══════╪═══════╪═══════╬═══════╪═══════╪═══════╬═══════╪═══════╪═══════╣
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╟―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╢
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╟―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╢
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╠═══════╪═══════╪═══════╬═══════╪═══════╪═══════╬═══════╪═══════╪═══════╣
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╟―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╢
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╟―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╫―――――――┼―――――――┼―――――――╢
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+║       │       │       ║       │       │       ║       │       │       ║
+╚═══════╧═══════╧═══════╩═══════╧═══════╧═══════╩═══════╧═══════╧═══════╝
+""";
+        public static string Big1 = """
+/  | 
+ | | 
+[___]
+""";
+        public static string Big2 = """
+[__ \
+/ __/
+|___]
+""";
+        public static string Big3 = """
+[__ \
+[__ <
+[___/
+""";
+        public static string Big4 = """
+| | |
+|__ |
+  |_|
+""";
+        public static string Big5 = """
+| __]
+|__ \
+[___/
+""";
+        public static string Big6 = """
+/ __]
+| _ \
+\___/
+""";
+        public static string Big7 = """
+[__ |
+  / /
+ /_/ 
+""";
+        public static string Big8 = """
+/ _ \
+> _ <
+\___/
+""";
+        public static string Big9 = """
+/ _ \
+\__ |
+[___/
+""";
+        public static string[] Big = [BigBoard, Big1, Big2, Big3, Big4, Big5, Big6, Big7, Big8, Big9];
+        #endregion
+
         public const string IgnoredCell = "#";
         public const int MsDelay = 25;
          
-        private readonly static List<(Board Board, Board? Solution)> Presets = [];
+        private readonly static List<(Board Board, string? About, Board? Solution)> Presets = [];
         public static Board Board { get; private set; } = new();
         public static Board? Solution { get; private set; }
 
-        public static void Register(Board board, Board? solution = null)
+        public static int Register(Board board, string? about = null, Board? solution = null)
         {
+            if (!board.OriginalCells.Any(cell => cell != 0))
+                board = new(board.Cells);
+
             for (int i = 0; i < Presets.Count; i++)
             {
                 if (Presets[i].Board == board)
                 {
-                    Presets[i] = (board, solution);
+                    Presets[i] = (board, about, solution);
                     if (Board == board)
                         Solution = solution;
-                    return;
+                    return i;
                 }
             }
-            Presets.Add((board, solution));
+
+            Presets.Add((board, about, solution));
+            return Presets.Count - 1;
         }
         public static void UnRegister(Board board)
         {
@@ -150,6 +242,15 @@ namespace SudokuCli
         {
             Board board = boardOverride ?? Board;
             Write(position => (board[position], board[position] > 0), writeEntropy ? board.Entropy : null, boardOverride == null ? Solution : null);
+            foreach (var preset in Presets)
+            {
+                if (preset.Board == board && preset.About != null)
+                {
+                    Console.WriteLine(preset.About);
+                    Console.WriteLine();
+                    break;
+                }
+            }
         }
 
         public static void WritePeers(Func<Coordinate, Coordinate[]> peersLookup, int msDelay = MsDelay)
@@ -158,11 +259,58 @@ namespace SudokuCli
             {
                 Coordinate[] peers = peersLookup(currentPosition);
                 Write(position => position == currentPosition ? "O" : peers.Contains(position) ? "*" : null);
-                Delay(msDelay);
+                Delay(msDelay * 4);
             }
             Write();
         }
 
         public static void Delay(int msDelay = MsDelay) => Thread.Sleep(msDelay);
+
+        public static void ShowBig(int index)
+        {
+            Console.Clear();
+            Console.WriteLine(Big[index]);
+            Console.WriteLine();
+        }
     }
 }
+
+/*
+        ╔═══════╤═══════╤═══════╦═══════╤═══════╤═══════╦═══════╤═══════╤═══════╗
+/  |    ║       │       │       ║       │       │       ║       │       │       ║
+ | |    ║       │       │       ║       │       │       ║       │       │       ║
+[___]   ║       │       │       ║       │       │       ║       │       │       ║
+        ╟⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╢
+[__ \   ║       │       │       ║       │       │       ║       │       │       ║
+/ __/   ║       │       │       ║       │       │       ║       │       │       ║
+|___]   ║       │       │       ║       │       │       ║       │       │       ║
+        ╟⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╢
+[__ \   ║       │       │       ║       │       │       ║       │       │       ║
+[__ ❬   ║       │       │       ║       │       │       ║       │       │       ║
+[___/   ║       │       │       ║       │       │       ║       │       │       ║
+        ╠═══════╪═══════╪═══════╬═══════╪═══════╪═══════╬═══════╪═══════╪═══════╣
+| | |   ║       │       │       ║       │       │       ║       │       │       ║
+|__ |   ║       │       │       ║       │       │       ║       │       │       ║
+  |_|   ║       │       │       ║       │       │       ║       │       │       ║
+        ╟⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╢
+| __]   ║       │       │       ║       │       │       ║       │       │       ║
+|__ \   ║       │       │       ║       │       │       ║       │       │       ║
+[___/   ║       │       │       ║       │       │       ║       │       │       ║
+        ╟⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╢
+/ __]   ║       │       │       ║       │       │       ║       │       │       ║
+⎸ _ \   ║       │       │       ║       │       │       ║       │       │       ║
+\___/   ║       │       │       ║       │       │       ║       │       │       ║
+        ╠═══════╪═══════╪═══════╬═══════╪═══════╪═══════╬═══════╪═══════╪═══════╣
+[__ ⎹   ║       │       │       ║       │       │       ║       │       │       ║
+  / /   ║       │       │       ║       │       │       ║       │       │       ║
+ /_/    ║       │       │       ║       │       │       ║       │       │       ║
+        ╟⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╢
+/ _ \   ║       │       │       ║       │       │       ║       │       │       ║
+❭ _ ❬   ║       │       │       ║       │       │       ║       │       │       ║
+\___/   ║       │       │       ║       │       │       ║       │       │       ║
+        ╟⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╫⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯┼⎯⎯⎯⎯⎯⎯⎯╢
+/ _ \   ║       │       │       ║       │       │       ║       │       │       ║
+\__ ⎹   ║       │       │       ║       │       │       ║       │       │       ║
+[___/   ║       │       │       ║       │       │       ║       │       │       ║
+        ╚═══════╧═══════╧═══════╩═══════╧═══════╧═══════╩═══════╧═══════╧═══════╝
+*/
