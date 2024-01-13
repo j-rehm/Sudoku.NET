@@ -182,6 +182,13 @@ namespace SudokuCli
             Solution = null;
         }
 
+        public static void List()
+        {
+            Console.Clear();
+            for (int i = 0; i < Presets.Count; i++)
+                Console.WriteLine($"{i.ToString().PadLeft(Presets.Count / 10 + 1)}: {Presets[i].About}");
+        }
+
         private static void Write(Func<Coordinate, (object?, bool)> lookup, int[][]? entropy, Board? solution = null)
         {
             Console.Clear();

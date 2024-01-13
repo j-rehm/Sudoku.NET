@@ -2,6 +2,20 @@
 using SudokuCli;
 using System.Text.RegularExpressions;
 
+int[,] empty = new int[Board.Magnitude, Board.Magnitude] {
+    { 0,1,0, 0,0,0, 4,7,0, },
+    { 0,0,0, 0,0,5, 3,0,0, },
+    { 7,0,0, 2,0,8, 9,0,0, },
+
+    { 0,0,0, 0,2,7, 0,9,4, },
+    { 0,2,0, 5,9,0, 0,0,3, },
+    { 0,4,0, 8,1,3, 0,0,0, },
+
+    { 9,0,0, 0,0,0, 0,0,8, },
+    { 1,0,0, 7,3,0, 0,0,0, },
+    { 3,0,0, 0,0,2, 6,5,0, },
+};
+
 int[,] stepSolvable = new int[Board.Magnitude, Board.Magnitude] {
     { 0,2,0, 0,0,5, 0,9,8, },
     { 0,8,0, 0,0,0, 0,0,7, },
@@ -15,7 +29,6 @@ int[,] stepSolvable = new int[Board.Magnitude, Board.Magnitude] {
     { 0,0,1, 0,6,0, 0,7,5, },
     { 0,0,6, 1,0,0, 0,0,2, },
 };
-
 int[,] guessSolvable = new int[Board.Magnitude, Board.Magnitude] {
     { 0,0,6, 3,0,7, 0,0,0, },
     { 0,0,4, 0,0,0, 0,0,5, },
@@ -29,7 +42,6 @@ int[,] guessSolvable = new int[Board.Magnitude, Board.Magnitude] {
     { 0,1,0, 0,0,0, 0,0,0, },
     { 0,0,8, 1,0,9, 0,4,0, },
 };
-
 int[,] uniqueSolvable = new int[Board.Magnitude, Board.Magnitude] {
     { 0,0,0, 8,0,1, 0,0,0, },  //   2 3 7   8 4 1   5 6 9
     { 0,0,0, 0,0,0, 0,4,3, },  //   1 8 6   7 9 5   2 4 3
@@ -42,19 +54,6 @@ int[,] uniqueSolvable = new int[Board.Magnitude, Board.Magnitude] {
     { 6,0,0, 0,0,0, 0,7,5, },  //   6 4 2   9 1 8   3 7 5
     { 0,0,3, 4,0,0, 0,0,0, },  //   8 5 3   4 6 7   9 2 1
     { 0,0,0, 2,0,0, 6,0,0, },  //   9 7 1   2 5 3   6 8 4
-};
-int[,] uniqueSolution = new int[Board.Magnitude, Board.Magnitude] {
-    { 2,3,7, 8,4,1, 5,6,9, },
-    { 1,8,6, 7,9,5, 2,4,3, },
-    { 5,9,4, 3,2,6, 7,1,8, },
-
-    { 3,1,5, 6,7,4, 8,9,2, },
-    { 4,6,9, 5,8,2, 1,3,7, },
-    { 7,2,8, 1,3,9, 4,5,6, },
-
-    { 6,4,2, 9,1,8, 3,7,5, },
-    { 8,5,3, 4,6,7, 9,2,1, },
-    { 9,7,1, 2,5,3, 6,8,4, },
 };
 
 int[,] invalidPosition = new int[Board.Magnitude, Board.Magnitude] {
@@ -70,7 +69,6 @@ int[,] invalidPosition = new int[Board.Magnitude, Board.Magnitude] {
     { 0,1,0, 0,0,0, 0,0,0, },
     { 0,0,8, 1,0,9, 0,4,0, },
 };
-
 int[,] testPosition = new int[Board.Magnitude, Board.Magnitude] {
     { 0,0,9, 0,5,0, 0,0,0, },
     { 5,0,0, 0,0,0, 4,0,0, },
@@ -83,6 +81,59 @@ int[,] testPosition = new int[Board.Magnitude, Board.Magnitude] {
     { 0,0,0, 0,1,0, 0,0,3, },
     { 6,0,0, 0,0,0, 0,2,0, },
     { 0,0,0, 0,2,0, 0,0,0, },
+};
+
+int[,] stephanieMed1 = new int[Board.Magnitude, Board.Magnitude] {
+    { 0,5,0, 9,3,0, 0,4,0, },
+    { 7,4,0, 0,1,6, 0,0,0, },
+    { 6,0,0, 0,0,0, 8,0,0, },
+
+    { 3,0,1, 0,0,0, 7,0,0, },
+    { 4,0,5, 3,2,7, 0,1,6, },
+    { 2,0,9, 0,6,5, 3,8,4, },
+
+    { 0,3,0, 0,0,9, 0,0,0, },
+    { 0,0,0, 6,7,0, 5,0,8, },
+    { 5,0,0, 0,0,0, 0,6,9, },
+};
+int[,] stephanieMed2 = new int[Board.Magnitude, Board.Magnitude] {
+    { 0,0,0, 5,2,0, 0,0,7, },
+    { 0,0,0, 0,0,3, 0,6,0, },
+    { 0,1,0, 0,6,7, 0,4,0, },
+
+    { 0,7,0, 4,3,5, 0,0,6, },
+    { 0,0,9, 0,7,0, 8,5,0, },
+    { 0,0,6, 0,8,0, 4,7,3, },
+
+    { 5,9,0, 6,1,0, 0,3,4, },
+    { 0,6,4, 0,0,0, 0,1,9, },
+    { 1,0,2, 7,0,0, 6,0,5, },
+};
+int[,] stephanieHard1 = new int[Board.Magnitude, Board.Magnitude] {
+    { 0,1,0, 0,0,0, 4,7,0, },
+    { 0,0,0, 0,0,5, 3,0,0, },
+    { 7,0,0, 2,0,8, 9,0,0, },
+
+    { 0,0,0, 0,2,7, 0,9,4, },
+    { 0,2,0, 5,9,0, 0,0,3, },
+    { 0,4,0, 8,1,3, 0,0,0, },
+
+    { 9,0,0, 0,0,0, 0,0,8, },
+    { 1,0,0, 7,3,0, 0,0,0, },
+    { 3,0,0, 0,0,2, 6,5,0, },
+};
+int[,] stephanieHard2 = new int[Board.Magnitude, Board.Magnitude] {
+    { 0,1,0, 0,0,0, 4,7,0, },
+    { 0,0,0, 0,0,5, 3,0,0, },
+    { 7,0,0, 2,0,8, 9,0,0, },
+
+    { 0,0,0, 0,2,7, 0,9,4, },
+    { 0,2,0, 5,9,0, 0,0,3, },
+    { 0,4,0, 8,1,3, 0,0,0, },
+
+    { 9,0,0, 0,0,0, 0,0,8, },
+    { 1,0,0, 7,3,0, 0,0,0, },
+    { 3,0,0, 0,0,2, 6,5,0, },
 };
 
 string[] RowAliases = ["row", "r"];
@@ -103,12 +154,15 @@ string[] EntropyAliases = ["entropy", "e"];
 string[] SolutionAliases = ["solution", "s"];
 string[] BigAliases = ["big"];
 
+BoardWriter.Register(empty, "This board is empty.");
 BoardWriter.Register(stepSolvable, "This board can be solved without making any guesses.");
 BoardWriter.Register(guessSolvable, "This board can only be solved by making guesses.");
 BoardWriter.Register(uniqueSolvable, "This board has the minimum of 17 givens.");
-BoardWriter.Register(uniqueSolvable, "This board has the minimum of 17 givens.", uniqueSolution);
 BoardWriter.Register(invalidPosition, "This board is not valid.");
 BoardWriter.Register(testPosition, "This is a board with randomly-selected givens.");
+BoardWriter.Register(stephanieMed1, "This is a board from Stephanie's sudoku app. (Medium 1)");
+BoardWriter.Register(stephanieMed2, "This is a board from Stephanie's sudoku app. (Medium 2)");
+BoardWriter.Register(stephanieHard1, "This is a board from Stephanie's sudoku app. (Hard 1)");
 
 BoardWriter.Write();
 
@@ -127,6 +181,9 @@ do
 
     switch (command)
     {
+        case "list":
+            BoardWriter.List();
+            break;
         case "load":
             if (options.Length == 1 && int.TryParse(options[0], out int index))
                 if (BoardWriter.Load(index))
